@@ -11,6 +11,7 @@ import math
 STARTFREQ = 1275.0
 BANDWIDTH = 6.25
 NCHAN = 32
+PPP = 4
 '''
 CHANNEL = 30
 FREQ = STARTFREQ+(NCHAN-CHANNEL+1)*BANDWIDTH
@@ -51,8 +52,11 @@ filename6 = "/home/scratch/eramey/guppi_56465_J1713+0747_0006_mitigated_fold/mit
 # guppi 0006_0000 fully mitigated (not normalized)
 filename7 = "/home/scratch/eramey/guppi_0006_0000_mitigated/mitigated_0006_0001_Resids.dat"
 
+# guppi 0006 unmitigated (zapped)
+filename8 = "/home/scratch/eramey/guppi_56465_J1713+0747_0006_unmitigated_fold/unmitigated_zapped_resids.dat"
+
 # enter the filenames, starting with the file to compare to
-filenames = [filename5, filename6]
+filenames = [filename5, filename6, filename8]
 
 BANDS = [327,430,820,1400,2500] #2500 is better for plotting
 colors = ['m','r','g','k','b']
@@ -141,6 +145,9 @@ def checkChans(channels):
 			return False
 	return True
 
+def flatten(array):
+	return [x for thing in array for x in thing]
+
 def getInfo(filename, FREQ, axes, addOn):
 	print "\nFile: "+filename+"\n"
 	
@@ -167,6 +174,7 @@ def getInfo(filename, FREQ, axes, addOn):
 			ch[index].append(resids[i])
 			err[index].append(errs[i])
 			mjds2[index].append(mjds[i])
+	
 	'''
 	print "channels ", len(ch)
 	print "errors ", len(err)
@@ -179,42 +187,55 @@ def getInfo(filename, FREQ, axes, addOn):
 	for t in mjds2:
 		print len(t)
 	
-	print ch[0]
 	'''
-	
 	ch = np.array(ch)
 	err = np.array(err)
 	mjds2 = np.array(mjds2)
 	
 	for e in err:
-		e = e*10**(-6)
+		e = np.array(e)
+		e = e*(10**(-6))
 	
 	# average and standard deviation
-	avg, stdDev = avg_and_std(ch.flatten())
+	
+	avg, stdDev = avg_and_std(flatten(ch))
 	
 	# weighted average and standard deviation
-	weights = [1/w**2 for w in err.flatten()]
-	#weighted_stats = DescrStatsW(ch, weights=weights)
-	#w_avg = weighted_stats.mean
-	#w_stdDev = weighted_stats.std
-	#w_avg, w_stdDev = weighted_avg_and_std(ch, weights)
-	w_avg, w_stdDev = weighted_moments(ch.flatten(), weights, unbiased=True)
+	weights = [1/w**2 for w in flatten(err)]
+	w_avg, w_stdDev = weighted_moments(flatten(ch), weights, unbiased=True)
 	
 	print "\tAverage: {:.2e}".format(avg)
 	print "\tStandard deviation: {:.2e}".format(stdDev)
 	print "\tWeighted average: {:.2e}".format(w_avg)
 	print "\tWeighted standard deviation: {:.2e}".format(w_stdDev)
 	
-	for i in range(len(axarr)):
+	if not isinstance(axarr, np.ndarray):
+		mjds2 = flatten(mjds2)
+		ch = flatten(ch)
+		err = flatten(err)
 		matplotlib.rc('xtick', labelsize=8) 
 		matplotlib.rc('ytick', labelsize=8)
 		matplotlib.rc('axes', titlesize=8)
-		axes[i].errorbar(mjds2[i], ch[i], yerr=err[i], linestyle='None', fmt='.', elinewidth=0.1, capthick=0.5)
-		axes[i].set_ylim(-100, 100)
-		axes[i].set_xlim(mjds2[i][0]-5, mjds2[i][len(mjds2 [i])-1]+5)	
-		start, end = axes[i].get_ylim()
-		axes[i].yaxis.set_ticks(np.arange(start, end+1, 25))
-		axes[i].set_title("Channel "+str(chans[i])+addOn)
+		axes.errorbar(mjds2, ch, yerr=err, linestyle='None', fmt='.', elinewidth=0.1, capthick=0.5)
+		axes.set_ylim(-100, 100)
+		axes.set_xlim(mjds2[0]-5, mjds2[len(mjds2)-1]+5)	
+		start, end = axarr.get_ylim()
+		axes.yaxis.set_ticks(np.arange(start, end+1, 25))
+		axes.set_title("Channel "+str(chans[0])+" "+addOn)
+	else:
+		for i in range(len(axes)):
+			#print "Plotting on: ", axes[i]
+			matplotlib.rc('xtick', labelsize=8) 
+			matplotlib.rc('ytick', labelsize=8)
+			matplotlib.rc('axes', titlesize=8)
+			axes[i].errorbar(mjds2[i], ch[i], yerr=err[i], linestyle='None', fmt='.', elinewidth=0.1, capthick=0.5)
+			axes[i].set_ylim(-100, 100)
+			axes[i].set_xlim(mjds2[i][0]-5, mjds2[i][len(mjds2 [i])-1]+5)	
+			start, end = axes[i].get_ylim()
+			axes[i].yaxis.set_ticks(np.arange(start, end+1, 25))
+			axes[i].set_title("Channel "+str(chans[i])+" "+addOn)
+			
+		print ""
 	
 	# return the statistics
 	return avg, stdDev, w_avg, w_stdDev
@@ -245,23 +266,39 @@ statnames = ["Average", "Standard deviation", "Weighted average", "Weighted stan
 
 # get the frequency from the user-defined channel
 freq, chans = getFreq()
+#axarr = []
 # set up graphs for each channel & file
-f, axarr = plt.subplots(len(freq), len(filenames), sharex='col', sharey='row')
+f, axarr = plt.subplots(len(freq)-2, len(filenames), sharey='row', sharex='row')
+f2, axarr2 = plt.subplots(2, len(filenames), sharey = 'row', sharex='row')
 axarr = np.array(axarr)
+axarr2 = np.array(axarr2)
+
+#print "axarr: ", axarr, "\n"
+#print "axarr2: ", axarr2, "\n"
 
 # get stats from all the files
 for i in range(len(filenames)):
 	filename = filenames[i]
 	addOn = ""
-	if "unmitigated" in filename:
+	
+	if "zapped" in filename:
+		addOn = "zapped"
+	elif "unmitigated" in filename:
 		addOn = "unmitigated"
 	elif "normalized" in filename:
 		addOn = "mitigated, normalized"
 	else:
 		addOn = "mitigated"
-	someAxes = axarr[:, i]
+	if len(filenames)==1:
+		someAxes = axarr
+	elif not isinstance(axarr[0], np.ndarray):
+		someAxes = axarr[i]
+	else:
+		someAxes = np.array(flatten([axarr[:, i], axarr2[:, i]]))
+		#print "someAxes: ", someAxes, "\n"
 	stats.append(getInfo(filename, freq, someAxes, addOn))
 
+f2.show()
 plt.show()
 
 # compare stats of all the files
