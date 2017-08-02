@@ -55,8 +55,11 @@ filename7 = "/home/scratch/eramey/guppi_0006_0000_mitigated/mitigated_0006_0001_
 # guppi 0006 unmitigated (zapped)
 filename8 = "/home/scratch/eramey/guppi_56465_J1713+0747_0006_unmitigated_fold/unmitigated_zapped_resids.dat"
 
+# guppi 0006 mitigated with normalization
+filename9 = "/home/scratch/eramey/guppi_0006_mitigated_normalized/guppi_0006_mitigated_normalized_Resids.dat"
+
 # enter the filenames, starting with the file to compare to
-filenames = [filename5, filename6, filename8]
+filenames = [filename5, filename6, filename9]
 
 BANDS = [327,430,820,1400,2500] #2500 is better for plotting
 colors = ['m','r','g','k','b']
@@ -258,6 +261,9 @@ def getInfo(filename, FREQ, axes, addOn):
 	
 	print "Error in variance: " + str(e_tot)
 	'''
+
+def getSingleTOA(filename, axes, addOn):
+	
 
 # initialize stats array
 stats = []
