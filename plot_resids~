@@ -152,6 +152,16 @@ def checkChans(channels):
 def flatten(array):
 	return [x for thing in array for x in thing]
 
+def addOn(filename):
+	if "zapped" in filename:
+		addOn = "zapped"
+	elif "unmitigated" in filename:
+		addOn = "unmitigated"
+	elif "normalized" in filename:
+		addOn = "mitigated, normalized"
+	else:
+		addOn = "mitigated"
+
 def getInfo(filename, FREQ, axes, addOn):
 	print "\nFile: "+filename+"\n"
 	
@@ -170,6 +180,8 @@ def getInfo(filename, FREQ, axes, addOn):
 	ch = [[] for i in range(len(FREQ))]
 	err = [[] for i in range(len(FREQ))]
 	mjds2 = [[] for i in range(len(FREQ))]
+	if "normalized" in filename:
+		print mjds
 	
 	# append the correct residuals and errors
 	for i in range(len(resids)):
@@ -261,6 +273,35 @@ def getInfo(filename, FREQ, axes, addOn):
 	
 	print "Error in variance: " + str(e_tot)
 	'''
+
+def getSingleTOA(filenames):
+	
+	times = raw_input("Enter the times to plot: ")
+	times = np.array(times.split(" "))
+	
+	f, axarr = plt.subplots(len(times), len(filenames), sharey='row', sharex='row', figsize=(25, 15))
+	
+	for j in range(len(filenames)):
+		filename = filenames[j]
+		# load in the file
+		mjds,freqs,resids,errs = np.loadtxt("%s"%filename,unpack=True,usecols=(0,1,2,3))
+		
+		# convert dates to seconds
+		start = mjds[0]
+		for i in range(len(mjds)):
+			mjds[i]-=start
+			mjds[i]*=3600*24
+		
+		mjds = np.array(mjds)
+		resids = np.array(resids)
+		errs = np.array(errs)
+		
+		# loop through plots
+		for i in range(len(times))
+			lo = times[i]/10*10
+			hi = lo+10
+			indices = np.where(mjds>lo and mjds<hi)
+			axes[i, j].errorbar(mjds[indices], resids[indices], yerr=errs[indices], linestyle='None', fmt='.', elinewidth=0.3, capthick=0.5)
 
 # initialize stats array
 stats = []
